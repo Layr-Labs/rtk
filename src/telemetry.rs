@@ -3,17 +3,16 @@ use crate::tracking;
 use sha2::{Digest, Sha256};
 use std::path::PathBuf;
 
-const TELEMETRY_URL: Option<&str> = option_env!("RTK_TELEMETRY_URL");
-const TELEMETRY_TOKEN: Option<&str> = option_env!("RTK_TELEMETRY_TOKEN");
 const PING_INTERVAL_SECS: u64 = 23 * 3600; // 23 hours
 
 /// Send a telemetry ping if enabled and not already sent today.
 /// Fire-and-forget: errors are silently ignored.
 pub fn maybe_ping() {
-    // No URL compiled in → telemetry disabled
-    if TELEMETRY_URL.is_none() {
-        return;
-    }
+    // No URL set at runtime → telemetry disabled
+    let url = match std::env::var("RTK_TELEMETRY_URL") {
+        Ok(u) if !u.is_empty() => u,
+        _ => return,
+    };
 
     // Check opt-out: env var
     if std::env::var("RTK_TELEMETRY_DISABLED").unwrap_or_default() == "1" {
@@ -40,14 +39,15 @@ pub fn maybe_ping() {
     // Touch marker file immediately (before sending) to avoid double-ping
     touch_marker(&marker);
 
+    let token = std::env::var("RTK_TELEMETRY_TOKEN").ok();
+
     // Spawn thread so we never block the CLI
-    std::thread::spawn(|| {
-        let _ = send_ping();
+    std::thread::spawn(move || {
+        let _ = send_ping(&url, token.as_deref());
     });
 }
 
-fn send_ping() -> Result<(), Box<dyn std::error::Error>> {
-    let url = TELEMETRY_URL.ok_or("no telemetry URL")?;
+fn send_ping(url: &str, token: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
     let device_hash = generate_device_hash();
     let version = env!("CARGO_PKG_VERSION").to_string();
     let os = std::env::consts::OS.to_string();
@@ -73,7 +73,7 @@ fn send_ping() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut req = ureq::post(url).set("Content-Type", "application/json");
 
-    if let Some(token) = TELEMETRY_TOKEN {
+    if let Some(token) = token {
         req = req.set("X-RTK-Token", token);
     }
 
