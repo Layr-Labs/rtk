@@ -64,7 +64,8 @@ jobs:
   # ═══════════════════════════════════════════════
 
   release-please:
-    if: github.ref == 'refs/heads/master'
+    # Skip when push comes from the sync bot — release is handled by sync-upstream.yml
+    if: github.ref == 'refs/heads/master' && github.event.head_commit.author.name != 'github-actions[bot]'
     runs-on: ubuntu-latest
     outputs:
       release_created: ${{ steps.release.outputs.release_created }}

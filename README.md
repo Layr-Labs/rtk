@@ -66,7 +66,7 @@ brew install rtk
 ### Quick Install (Linux/macOS)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/Layr-Labs/rtk/refs/heads/master/install.sh | sh
 ```
 
 > Installs to `~/.local/bin`. Add to PATH if needed:

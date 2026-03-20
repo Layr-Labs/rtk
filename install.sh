@@ -4,7 +4,7 @@
 
 set -e
 
-REPO="rtk-ai/rtk"
+REPO="Layr-Labs/rtk"
 BINARY_NAME="rtk"
 INSTALL_DIR="${RTK_INSTALL_DIR:-$HOME/.local/bin}"
 

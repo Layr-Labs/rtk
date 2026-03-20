@@ -7,11 +7,15 @@ on:
 
 permissions:
   contents: write
+  issues: write
 
 jobs:
   sync:
     name: Merge upstream/master
     runs-on: ubuntu-latest
+    outputs:
+      merged: ${{ steps.merge.outputs.merged }}
+      new_tag: ${{ steps.version.outputs.new_tag }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -30,6 +34,10 @@ jobs:
       - name: Fetch upstream
         run: git fetch upstream master
 
+      - name: Capture version before merge
+        id: before
+        run: echo "version=$(grep '^version = ' Cargo.toml | head -1 | cut -d'"' -f2)" >> "$GITHUB_OUTPUT"
+
       - name: Merge upstream/master
         id: merge
         run: |
@@ -43,6 +51,22 @@ jobs:
       - name: Push if merged cleanly
         if: steps.merge.outputs.merged == 'true'
         run: git push origin master
+
+      - name: Tag new version if bumped
+        id: version
+        if: steps.merge.outputs.merged == 'true'
+        run: |
+          VERSION_AFTER=$(grep '^version = ' Cargo.toml | head -1 | cut -d'"' -f2)
+          VERSION_BEFORE="${{ steps.before.outputs.version }}"
+          if [ "$VERSION_AFTER" != "$VERSION_BEFORE" ]; then
+            TAG="v${VERSION_AFTER}"
+            if ! git ls-remote --tags origin "refs/tags/${TAG}" | grep -q .; then
+              git tag "$TAG"
+              git push origin "$TAG"
+              echo "new_tag=$TAG" >> "$GITHUB_OUTPUT"
+              echo "Tagging new version: $TAG"
+            fi
+          fi
 
       - name: Open issue on conflict
         if: steps.merge.outputs.merged == 'false'
@@ -76,3 +100,15 @@ jobs:
                 `Triggered by run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
               ].join('\n'),
             });
+
+  release:
+    name: Build and publish release
+    needs: sync
+    if: needs.sync.outputs.new_tag != ''
+    uses: ./.github/workflows/release.yml
+    with:
+      tag: ${{ needs.sync.outputs.new_tag }}
+      prerelease: false
+    permissions:
+      contents: write
+    secrets: inherit
