@@ -353,3 +353,4 @@ jobs:
           fi
         env:
           GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+
