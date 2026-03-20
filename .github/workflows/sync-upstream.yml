@@ -59,7 +59,7 @@ jobs:
           VERSION_AFTER=$(grep '^version = ' Cargo.toml | head -1 | cut -d'"' -f2)
           VERSION_BEFORE="${{ steps.before.outputs.version }}"
           if [ "$VERSION_AFTER" != "$VERSION_BEFORE" ]; then
-            TAG="v${VERSION_AFTER}"
+            TAG="v${VERSION_AFTER}-eigen"
             if ! git ls-remote --tags origin "refs/tags/${TAG}" | grep -q .; then
               git tag "$TAG"
               git push origin "$TAG"
